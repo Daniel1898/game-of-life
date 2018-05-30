@@ -21,7 +21,7 @@ public class Main {
     double dy = 0;
     double dr = 0.01;
     Map<Point, Point> population = new HashMap<>();
-    double radius = 0.001;
+    double radius = 0.1;
     int fx = 0;
     int fy = 0;
     int pointCount;
