@@ -22,7 +22,7 @@ public class Main {
     double dr = 0.01;
 
     Map<Point, Point> population = new HashMap<>();
-    double radius = 0.01;
+    double radius = 0.1;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -205,7 +205,7 @@ public class Main {
 
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/w1.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
