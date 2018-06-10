@@ -20,11 +20,13 @@ public class Main {
     double dx = 0;
     double dy = 0;
     double dr = 0.01;
+
     Map<Point, Point> population = new HashMap<>();
-    double radius = 0.001;
+    double radius = 0.01;
     int fx = 0;
     int fy = 0;
     int pointCount;
+    int genCount=0;
 
     class Point {
         int x;
@@ -51,9 +53,9 @@ public class Main {
 
         @Override
         public int hashCode() {
-            return Objects.hash(x, y);
+            return x*1000000+y;
+           // return ((x>y)?(x^(y<<15)):((x<<9)^y));
         }
-
     }
 
 
@@ -75,27 +77,46 @@ public class Main {
         }
 
     }
-
-    public Map<Point, Point> generate() {
+    public void draw() {
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
+        for (Point p:population.values()) {
+            int x=p.x;
+            int y=p.y;
+            if ((2 * radius * (x + dx) >= MIN_WIDTH)
+                    && (2 * radius * (x + dx) <= MAX_WIDTH)
+                    && (2 * radius * (y + dy) >= MIN_HEIGHT)
+                    && (2 * radius * (y + dy) <= MAX_HEIGHT)) {
+                StdDraw.filledCircle(2 * radius * (x + dx), 2 * radius * (y + dy), radius);
+            }
+        }
+    }
+
+    public Map<Point, Point> generate() {
+        genCount++;
         System.out.println("generate " + population.size());
         int neibhors = 0;
-        Integer[][] Map;
+        Integer[][] map=new Integer[][]{{-1, -1, -1, -1, -1},
+                {-1, -1, -1, -1, -1},
+                {-1, -1,  1, -1, -1},
+                {-1, -1, -1, -1, -1},
+                {-1, -1, -1, -1, -1}};
         Map<Point, Point> newGen = new HashMap<>();
         for (Point p : population.values()) {
-            Map = new Integer[][]{{-1, -1, -1, -1, -1},
-                                  {-1, -1, -1, -1, -1},
-                                  {-1, -1,  1, -1, -1},
-                                  {-1, -1, -1, -1, -1},
-                                  {-1, -1, -1, -1, -1}};
+            for (int i=0;i<5;i++)
+            {
+                for (int j=0;j<5;j++)
+                {
+                    map[i][j]=-1;
+                }
+            }
 
-            neibhors = neibhorCalc(p.y, p.x, Map, 1, 1);
+            neibhors = neibhorCalc(p.y, p.x, map, 1, 1);
             if ((neibhors == 2) || (neibhors == 3)) {
-                draw(p.x, p.y);
+                //draw(p.x, p.y);
                 newGen.put(p, p);
             }
-            checkNeibhors(p.x, p.y, newGen, Map);
+            checkNeibhors(p.x, p.y, newGen, map);
         }
 
         return newGen;
@@ -110,7 +131,7 @@ public class Main {
                     if (nebhorMap[i + 2][j + 2] <= 0) {
                         if (neibhorCalc(p.y, p.x, nebhorMap, i + 1, j + 1) == 3) {
                             gen.put(p, p);
-                            draw(p.x, p.y);
+                            //draw(p.x, p.y);
                         }
                     }
                 }
@@ -145,15 +166,18 @@ public class Main {
 
     public void fileStringProcessing(String str) {
         int len = str.length();
-        if (str.charAt(0) == 'o' || str.charAt(0) == 'b' ||
-                (str.charAt(0) > '0' && str.charAt(0) <= '9' || str.charAt(0) == '$')) {
+
+        if ((len!=0) && ((str.charAt(0) == 'o')
+                || (str.charAt(0) == 'b')
+                || ((str.charAt(0) > '0') && (str.charAt(0) <= '9'))
+                || (str.charAt(0) == '$'))) {
 
             for (int i = 0; i < len; i++) {
                 if (str.charAt(i) == 'o') {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
                         Point point = new Point(fx, fy);
-                        draw(fx, fy);
+                        //draw(fx, fy);
                         population.put(point, point);
                         fx++;
                     }
@@ -181,7 +205,7 @@ public class Main {
 
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/w1.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -206,7 +230,8 @@ public class Main {
 
         }
         if (StdDraw.isKeyPressed(KeyEvent.VK_ADD)) {
-            if (radius + dr >= dr && dr < 0.1) {
+            if ((radius + dr >= dr)
+                    && (dr < 0.1)) {
                 dr *= 10;
             }
             radius += dr;
@@ -232,7 +257,7 @@ public class Main {
         app.setCanvasSettings();
         try {
             app.fileRead();
-
+            app.draw();
             StdDraw.show();
 
 
@@ -241,14 +266,17 @@ public class Main {
                 app.keys();
 
                 app.population = app.generate();
+                app.draw();
                 long tFrame = System.currentTimeMillis() - tStart;
                 String time = "frame:" + tFrame + "ms";
                 String fps = "fps: " + (1000.0 / tFrame);
                 String radius = "radius:" + app.radius;
+                String generation = "generation:" + app.genCount;
                 StdDraw.setPenColor(Color.RED);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 10, time);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 30, fps);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 60, radius);
+                StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 90, generation);
                 StdDraw.show();
             }
         } catch (IOException e) {
