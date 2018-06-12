@@ -54,11 +54,12 @@ public class Main {
         @Override
         public int hashCode() {
             return x*1000000+y;
-           // return ((x>y)?(x^(y<<15)):((x<<9)^y));
         }
     }
 
-
+    /***
+     * Установка параметров отрисовки
+     */
     public void setCanvasSettings() {
         StdDraw.setCanvasSize(MAX_WIDTH, MAX_HEIGHT);
         StdDraw.setXscale(MIN_WIDTH, MAX_WIDTH);
@@ -68,15 +69,6 @@ public class Main {
     }
 
 
-    public void draw(int x, int y) {
-        if ((2 * radius * (x + dx) >= MIN_WIDTH)
-                && (2 * radius * (x + dx) <= MAX_WIDTH)
-                && (2 * radius * (y + dy) >= MIN_HEIGHT)
-                && (2 * radius * (y + dy) <= MAX_HEIGHT)) {
-            StdDraw.filledCircle(2 * radius * (x + dx), 2 * radius * (y + dy), radius);
-        }
-
-    }
     public void draw() {
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
@@ -87,22 +79,29 @@ public class Main {
                     && (2 * radius * (x + dx) <= MAX_WIDTH)
                     && (2 * radius * (y + dy) >= MIN_HEIGHT)
                     && (2 * radius * (y + dy) <= MAX_HEIGHT)) {
-                StdDraw.filledCircle(2 * radius * (x + dx), 2 * radius * (y + dy), radius);
+                StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y + dy),radius, radius);
             }
         }
     }
 
+    /**
+     * Генерация следующего поколения
+     * @return Map в котором хранятся точки новой популяции
+     */
     public Map<Point, Point> generate() {
         genCount++;
         System.out.println("generate " + population.size());
         int neibhors = 0;
-        Integer[][] map=new Integer[][]{{-1, -1, -1, -1, -1},
-                {-1, -1, -1, -1, -1},
-                {-1, -1,  1, -1, -1},
-                {-1, -1, -1, -1, -1},
-                {-1, -1, -1, -1, -1}};
+        /*
+         * map используется для запоминания состояния
+         * текущей точки и ее соседей
+         * если точка "жива" хранит 1 если нет хранит 0
+         * если состояние не известно хранит -1
+         */
+        Integer[][] map=new Integer[5][5];
         Map<Point, Point> newGen = new HashMap<>();
         for (Point p : population.values()) {
+            //Очистка map
             for (int i=0;i<5;i++)
             {
                 for (int j=0;j<5;j++)
@@ -113,7 +112,6 @@ public class Main {
 
             neibhors = neibhorCalc(p.y, p.x, map, 1, 1);
             if ((neibhors == 2) || (neibhors == 3)) {
-                //draw(p.x, p.y);
                 newGen.put(p, p);
             }
             checkNeibhors(p.x, p.y, newGen, map);
@@ -122,6 +120,13 @@ public class Main {
         return newGen;
     }
 
+    /***
+     * Проверяет соседей точки с координатами x и y
+     * @param x координата x
+     * @param y координата y
+     * @param gen map хранящий новую популяцию
+     * @param nebhorMap массив с состояниями точку с координатами х у и ее соседей
+     */
     void checkNeibhors(int x, int y, Map<Point, Point> gen, Integer[][] nebhorMap) {
         Point p;
         for (int i = -1; i <= 1; i++) {
@@ -131,7 +136,6 @@ public class Main {
                     if (nebhorMap[i + 2][j + 2] <= 0) {
                         if (neibhorCalc(p.y, p.x, nebhorMap, i + 1, j + 1) == 3) {
                             gen.put(p, p);
-                            //draw(p.x, p.y);
                         }
                     }
                 }
@@ -139,22 +143,36 @@ public class Main {
         }
     }
 
+    /***
+     * Считает живых соседей точки с координатами x y
+     * @param y координата y передаваемой точки
+     * @param x координата х передаваемой точки
+     * @param nebhorMap массив с состояниями точки с координатами х у и ее соседей
+     * @param dy
+     * @param dx
+     * @return количество живых соседей точки
+     */
     public int neibhorCalc(int y, int x, Integer[][] nebhorMap, int dy, int dx) {
         int sum = 0;
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
+                /*
+                 * Проверяем известно ли состояние точки.
+                 * Если известно берем состояние из массива
+                 * иначе проверяем есть ли жива ли точка в текущем околении
+                 */
                 if (nebhorMap[i + 1 + dy][j + 1 + dx] == -1) {
-                    if (!((i == 0) && (j == 0))
+                    if (((i|j)!=0)
                             && (population.containsKey(new Point(x + i, y + j)))) {
                         nebhorMap[i + 1 + dy][j + 1 + dx] = 1;
                         sum++;
                     } else {
-                        if (!((i == 0) && (j == 0))) {
+                        if ((i|j)!=0) {
                             nebhorMap[i + 1 + dy][j + 1 + dx] = 0;
                         }
                     }
                 } else {
-                    if (!((i == 0) && (j == 0))) {
+                    if ((i|j)!=0) {
                         sum += nebhorMap[i + 1 + dy][j + 1 + dx];
                     }
                 }
@@ -163,7 +181,10 @@ public class Main {
         return sum;
     }
 
-
+    /***
+     * Обрабатывает строки считанные из файла
+     * @param str
+     */
     public void fileStringProcessing(String str) {
         int len = str.length();
 
@@ -177,7 +198,6 @@ public class Main {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
                         Point point = new Point(fx, fy);
-                        //draw(fx, fy);
                         population.put(point, point);
                         fx++;
                     }
@@ -202,10 +222,13 @@ public class Main {
         }
     }
 
-
+    /***
+     * Считывает строки из файла
+     * @throws IOException
+     */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/w1.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/lineship1.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -219,6 +242,10 @@ public class Main {
         System.out.println("ready");
     }
 
+    /***
+     * Обрабатывает клавиши масштабирования
+     * и передвижения о экрану
+     */
     public void keys() {
 
         if (StdDraw.isKeyPressed(KeyEvent.VK_SUBTRACT)) {
