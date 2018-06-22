@@ -22,7 +22,7 @@ public class Main {
     double dy = 0;
     double dr = 0.01;
 
-    List<Point> population = new ArrayList<>();
+    List<List<Point>> population = new ArrayList<>();
     double radius = 0.1;
     int fx = 0;
     int fy = 0;
@@ -75,8 +75,8 @@ public class Main {
 
     }
 
-    public List<Point> generate() {
-        List<Point> newGen=new ArrayList<>();
+    public List<List<Point>> generate() {
+        List<List<Point>> newGen=new ArrayList<>();
 
         return newGen;
     }
@@ -107,7 +107,7 @@ public class Main {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
                         Point point = new Point(fx, fy);
-                        // тут бедет добавление точки в популяцию
+                        population.get(fy).add(point);
                         fx++;
                     }
                     pointCount = 0;
@@ -122,7 +122,9 @@ public class Main {
                     fx = 0;
                     for (int j = 0; j < pointCount; j++) {
                         fy++;
+                        population.add(new ArrayList<>());
                     }
+
                     pointCount = 0;
                 } else {
                     pointCount = pointCount * 10 + str.charAt(i) - '0';
@@ -143,6 +145,7 @@ public class Main {
         int k = 0;
         pointCount = 0;
         String line;
+        population.add(new ArrayList<>());
         while ((line = bReader.readLine()) != null) {
             k++;
             System.out.println(k);
@@ -187,36 +190,30 @@ public class Main {
 
     }
 
-   /* public void Start()
+    public void start()
     {
-
-    }*/
-
-    public static void main(String[] args) throws InterruptedException {
-
-        Main app = new Main();
-        app.setCanvasSettings();
+        setCanvasSettings();
         try {
-            app.fileRead();
-            app.draw();
+            fileRead();
+            draw();
             StdDraw.show();
 
 
             while (true) {
                 long tStart = System.currentTimeMillis();
-                app.keys();
+                keys();
 
-                app.population = app.generate();
-                app.draw();
+                population = generate();
+                draw();
                 long tFrame = System.currentTimeMillis() - tStart;
                 String time = "frame:" + tFrame + "ms";
                 String fps = "fps: " + (1000.0 / tFrame);
-                String radius = "radius:" + app.radius;
-                String generation = "generation:" + app.genCount;
+                String radiusStr = "radius:" + radius;
+                String generation = "generation:" + genCount;
                 StdDraw.setPenColor(Color.RED);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 10, time);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 30, fps);
-                StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 60, radius);
+                StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 60, radiusStr);
                 StdDraw.textLeft(MIN_WIDTH + 20, MAX_HEIGHT - 90, generation);
                 StdDraw.show();
             }
@@ -225,6 +222,12 @@ public class Main {
             StdDraw.show();
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+
+        Main app = new Main();
+        app.start();
 
     }
 
