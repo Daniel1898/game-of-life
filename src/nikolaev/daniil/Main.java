@@ -22,42 +22,15 @@ public class Main {
     double dy = 0;
     double dr = 0.01;
 
-    List<List<Point>> population = new ArrayList<>();
+    List<PointRow> population = new ArrayList<>();
     double radius = 0.1;
     int fx = 0;
     int fy = 0;
     int pointCount;
     int genCount=0;
 
-    class Point {
-        int x;
-        int y;
 
-        Point(int x_, int y_) {
-            x = x_;
-            y = y_;
-        }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if ((o == null)
-                    || (getClass() != o.getClass())) {
-                return false;
-            }
-            Point point = (Point) o;
-            return x == point.x &&
-                    y == point.y;
-        }
-
-        @Override
-        public int hashCode() {
-            return y * 10000000 + x;
-
-        }
-    }
 
     /***
      * Установка параметров отрисовки
@@ -70,30 +43,38 @@ public class Main {
         StdDraw.clear(Color.WHITE);
     }
 
+    public class PointRow extends ArrayList<Integer> implements Comparable<Integer>
+    {
+        int index;
+        PointRow(int index)
+        {
+            super();
+            this.index = index;
+        }
+        @Override
+        public int compareTo(Integer integer) {
+            return integer.compareTo(index);
+        }
+    }
+
 
     public void draw() {
-
+        StdDraw.clear(Color.white);
+        StdDraw.setPenColor(Color.black);
+        for (PointRow y:population) {
+            if ((2 * radius * (y.index + dy) >= MIN_HEIGHT)
+                    && (2 * radius * (y.index + dy) <= MAX_HEIGHT))
+            for (int x:y) {
+                if ((2 * radius * (x + dx) >= MIN_WIDTH)
+                        && (2 * radius * (x + dx) <= MAX_WIDTH)) {
+                    StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius, radius);
+                }
+            }
+        }
     }
 
-    public List<List<Point>> generate() {
-        List<List<Point>> newGen=new ArrayList<>();
 
-        return newGen;
-    }
 
-    /***
-     * Считает живых соседей точки с координатами x y
-     * @return количество живых соседей точки
-     */
-    public int neibhorCalc() {
-        int sum=0;
-        return sum;
-    }
-
-    /***
-     * Обрабатывает строки считанные из файла
-     * @param str
-     */
     public void fileStringProcessing(String str) {
         int len = str.length();
 
@@ -107,7 +88,7 @@ public class Main {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
                         Point point = new Point(fx, fy);
-                        population.get(fy).add(point);
+                        population.get(fy).add(fx);
                         fx++;
                     }
                     pointCount = 0;
@@ -122,7 +103,7 @@ public class Main {
                     fx = 0;
                     for (int j = 0; j < pointCount; j++) {
                         fy++;
-                        population.add(new ArrayList<>());
+                        population.add(new PointRow(fy));
                     }
 
                     pointCount = 0;
@@ -139,13 +120,13 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/gun.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
         pointCount = 0;
         String line;
-        population.add(new ArrayList<>());
+        population.add(new PointRow(0));
         while ((line = bReader.readLine()) != null) {
             k++;
             System.out.println(k);
@@ -203,7 +184,7 @@ public class Main {
                 long tStart = System.currentTimeMillis();
                 keys();
 
-                population = generate();
+                /*population = generate();*/
                 draw();
                 long tFrame = System.currentTimeMillis() - tStart;
                 String time = "frame:" + tFrame + "ms";
