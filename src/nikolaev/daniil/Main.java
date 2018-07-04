@@ -23,13 +23,11 @@ public class Main {
     double dr = 0.01;
 
     List<PointRow> population = new ArrayList<>();
-    double radius = 0.01;
+    double radius = 0.001;
     int fx = 0;
     int fy = 0;
     int pointCount;
-    int genCount=0;
-
-
+    int genCount = 0;
 
 
     /***
@@ -43,14 +41,14 @@ public class Main {
         StdDraw.clear(Color.WHITE);
     }
 
-    public class PointRow extends ArrayList<Integer> implements Comparable<Integer>
-    {
+    public class PointRow extends ArrayList<Integer> implements Comparable<Integer> {
         int index;
-        PointRow(int index)
-        {
+
+        PointRow(int index) {
             super();
             this.index = index;
         }
+
         @Override
         public int compareTo(Integer integer) {
             return integer.compareTo(index);
@@ -61,71 +59,66 @@ public class Main {
     public void draw() {
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
-        for (PointRow y:population) {
+        for (PointRow y : population) {
             if ((2 * radius * (y.index + dy) >= MIN_HEIGHT)
                     && (2 * radius * (y.index + dy) <= MAX_HEIGHT))
-            for (int x:y) {
-                if ((2 * radius * (x + dx) >= MIN_WIDTH)
-                        && (2 * radius * (x + dx) <= MAX_WIDTH)) {
-                    StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius, radius);
+                for (int x : y) {
+                    if ((2 * radius * (x + dx) >= MIN_WIDTH)
+                            && (2 * radius * (x + dx) <= MAX_WIDTH)) {
+                        StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius, radius);
+                    }
                 }
-            }
         }
     }
 
-    public List<PointRow> generate()
-    {
-        List<PointRow> newGen=new ArrayList<>();
-        PointRow ly=null;
-        PointRow cy=null;
-        PointRow ry=null;
-        PointRow next=null;
-        int index=population.get(0).index-1;
-        int lastLine=2;
+    public List<PointRow> generate() {
+        genCount++;
+        List<PointRow> newGen = new ArrayList<>();
+        PointRow ly = null;
+        PointRow cy = null;
+        PointRow ry = null;
+        PointRow next = null;
+        int index = population.get(0).index - 1;
+        int lastLine = 2;
 
-        ListIterator<PointRow> rowIterator=population.listIterator();
-        while (rowIterator.hasNext() || lastLine!=0)
-        {
+        ListIterator<PointRow> rowIterator = population.listIterator();
+        while (rowIterator.hasNext() || lastLine != 0) {
 
-          ly=cy;
-          cy=ry;
-          if (rowIterator.hasNext()) {
-              ry = rowIterator.next();
+            ly = cy;
+            cy = ry;
+            if (rowIterator.hasNext()) {
+                ry = rowIterator.next();
 
-              if (cy!=null )
-              {
-                  if(cy.index+1!=ry.index) {
-                      ry = null;
-                      rowIterator.previous();
-                  }
+                if (cy != null) {
+                    if (cy.index + 1 != ry.index) {
+                        ry = null;
+                        rowIterator.previous();
+                    }
 
-              } else
-              {
-                  if (ly!=null )
-                  {
-                      if (ly.index+2!=ry.index) {
-                          ry = null;
-                          rowIterator.previous();
-                      }
-                  }
-              }
-          } else
-          {
-              ry=null;
-              lastLine--;
-          }
-          PointRow r=genNewRow(index,ly,cy,ry);
-          if (r.size()>0){
-              newGen.add(genNewRow(index,ly,cy,ry));
-          }
-          index++;
+                } else {
+                    if (ly != null) {
+                        if (ly.index + 2 != ry.index) {
+                            ry = null;
+                            rowIterator.previous();
+                        }
+                    }
+                }
+            } else {
+                ry = null;
+                lastLine--;
+            }
+            PointRow r = genNewRow(index, ly, cy, ry);
+            if (r.size() > 0) {
+                newGen.add(genNewRow(index, ly, cy, ry));
+            }
+            index++;
         }
-      return newGen;
+        return newGen;
     }
 
     public PointRow genNewRow(int index, PointRow up, PointRow c, PointRow down) {
         PointRow newRow = new PointRow(index);
-        Set<Integer> newPoints=new TreeSet<>();
+        Set<Integer> newPoints = new TreeSet<>();
         Iterator<Integer> upIt = (up != null) ? up.iterator() : new Iterator<Integer>() {
             @Override
             public boolean hasNext() {
@@ -163,100 +156,101 @@ public class Main {
         while (upIt.hasNext() || cIt.hasNext() || downIt.hasNext()) {
             if (upIt.hasNext()) {
                 points[0] = upIt.next();
-            }
-            else
-            {
-                points[0]=-999999999;
+            } else {
+                points[0] = -999999999;
             }
             if (cIt.hasNext()) {
                 points[1] = cIt.next();
-            }
-            else
-            {
-                points[1]=-999999999;
+            } else {
+                points[1] = -999999999;
             }
             if (downIt.hasNext()) {
                 points[2] = downIt.next();
-            }
-            else
-            {
-                points[2]=-999999999;
+            } else {
+                points[2] = -999999999;
             }
             Arrays.sort(points);
-            for (int i=0;i<3;i++)
-            {
-                if ((i!=0 && points[i]==points[i-1]) || points[i]==-999999999)
-                {
+            for (int i = 0; i < 3; i++) {
+                if ((i != 0 && points[i] == points[i - 1]) || points[i] == -999999999) {
                     continue;
                 }
-                if (checkPoint(points[i]-1,up,c,down))
-                {
-                    newPoints.add(points[i]-1);
+                if (!newPoints.contains(points[i] - 1)) {
+                    if (checkPoint(points[i] - 1, up, c, down)) {
+                        newPoints.add(points[i] - 1);
+                    }
                 }
-                if (checkPoint(points[i],up,c,down))
-                {
+                if (checkPoint(points[i], up, c, down)) {
                     newPoints.add(points[i]);
                 }
-                if (checkPoint(points[i]+1,up,c,down))
-                {
-                    newPoints.add(points[i]+1);
+                if (!newPoints.contains(points[i] + 1)) {
+                    if (checkPoint(points[i] + 1, up, c, down)) {
+                        newPoints.add(points[i] + 1);
+                    }
                 }
             }
         }
         newRow.addAll(newPoints);
         return newRow;
     }
-    public boolean checkPoint(int x,PointRow up, PointRow c, PointRow down)
-    {
-        int neibhors=checkNeibhors(x,up,c,down);
-        if (c!=null && Collections.binarySearch(c,x)>=0)
-        {
-            if (neibhors==3 || neibhors==2)
-            {
+
+    public boolean checkPoint(int x, PointRow up, PointRow c, PointRow down) {
+        int neibhors = checkNeibhors(x, up, c, down);
+        if (c != null && Collections.binarySearch(c, x) >= 0) {
+            if (neibhors == 3 || neibhors == 2) {
                 return true;
-            }
-            else
-            {
+            } else {
                 return false;
             }
-        } else
-        {
-            if (neibhors==3)
-            {
+        } else {
+            if (neibhors == 3) {
                 return true;
-            }
-            else
-            {
+            } else {
                 return false;
             }
         }
 
     }
-    public int checkNeibhors(int x,PointRow up, PointRow c, PointRow down)
-    {
+
+    public int checkNeibhors(int x, PointRow up, PointRow c, PointRow down) {
         int sum = 0;
-        if (up!=null)
-        {
-            sum+=(Collections.binarySearch(up,x)>=0)?1:0;
-            sum+=(Collections.binarySearch(up,x+1)>=0)?1:0;
-            sum+=(Collections.binarySearch(up,x-1)>=0)?1:0;
+        sum+=rowSum(up,x);
+        if (c != null) {
+            sum += (Collections.binarySearch(c, x + 1) >= 0) ? 1 : 0;
+            sum += (Collections.binarySearch(c, x - 1) >= 0) ? 1 : 0;
         }
-        if (c!=null)
-        {
-            sum+=(Collections.binarySearch(c,x+1)>=0)?1:0;
-            sum+=(Collections.binarySearch(c,x-1)>=0)?1:0;
-        }
-        if (down!=null)
-        {
-            sum+=(Collections.binarySearch(down,x)>=0)?1:0;
-            sum+=(Collections.binarySearch(down,x+1)>=0)?1:0;
-            sum+=(Collections.binarySearch(down,x-1)>=0)?1:0;
-        }
+        sum+=rowSum(down,x);
         return sum;
     }
 
-
-
+    public int rowSum(PointRow row,int x) {
+        int sum=0;
+        int index;
+        if (row != null) {
+            index = Collections.binarySearch(row, x);
+            if (index >= 0) {
+                if (index < row.size() - 1) {
+                    sum += (row.get(index + 1) - 1 == x) ? 1 : 0;
+                }
+                sum++;
+                if (index != 0) {
+                    sum += (row.get(index - 1) + 1 == x) ? 1 : 0;
+                }
+            } else {
+                index=Collections.binarySearch(row, x + 1);
+                if (index>=0)
+                {
+                    sum++;
+                    if (index != 0) {
+                        sum += (row.get(index - 1) + 2 == row.get(index)) ? 1 : 0;
+                    }
+                } else
+                {
+                    sum += (Collections.binarySearch(row, x - 1) >= 0) ? 1 : 0;
+                }
+            }
+        }
+        return sum;
+    }
     public void fileStringProcessing(String str) {
         int len = str.length();
 
@@ -269,7 +263,6 @@ public class Main {
                 if (str.charAt(i) == 'o') {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
-                        Point point = new Point(fx, fy);
                         population.get(fy).add(fx);
                         fx++;
                     }
@@ -302,7 +295,7 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/C4Diag.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -353,8 +346,7 @@ public class Main {
 
     }
 
-    public void start()
-    {
+    public void start() {
         setCanvasSettings();
         try {
             fileRead();
