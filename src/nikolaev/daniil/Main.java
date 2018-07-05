@@ -17,7 +17,7 @@ public class Main {
     public static final int MIN_WIDTH = -10;
     public static final int MIN_HEIGHT = -10;
     public static final int OFFSET = 10;
-    public static final int INFINITY=-999999999;
+    public static final int INFINITY= -999999999;
 
 
     double dx = 0;
@@ -25,7 +25,7 @@ public class Main {
     double dr = 0.01;
 
     List<PointRow> population = new ArrayList<>();
-    double radius = 0.1;
+    double radius = 0.001;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -86,7 +86,8 @@ public class Main {
         PointRow upperRow = null;
         PointRow centerRow = null;
         PointRow lowerRow = null;
-        int index = population.get(0).index - 1;
+
+        int index = (population.isEmpty()) ? 0 : population.get(0).index - 1;
         int lastLine = 2;
 
         ListIterator<PointRow> rowIterator = population.listIterator();
@@ -134,6 +135,8 @@ public class Main {
     public PointRow genNewRow(int index, PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
         PointRow newRow = new PointRow(index);
         Set<Integer> newPoints = new TreeSet<>();
+        int[] points = new int[3];
+        int[][] pointMap;
         Iterator<Integer> upperRowIt = (upperRow != null) ? upperRow.iterator() : new Iterator<Integer>() {
             @Override
             public boolean hasNext() {
@@ -174,7 +177,7 @@ public class Main {
             }
         };
 
-        int[] points = new int[3];
+
         while (upperRowIt.hasNext() || centerRowIt.hasNext() || lowerRowIt.hasNext()) {
             if (upperRowIt.hasNext()) {
                 points[0] = upperRowIt.next();
@@ -193,22 +196,24 @@ public class Main {
             }
 
             Arrays.sort(points);
+
             for (int i = 0; i < 3; i++) {
                 if (((i != 0) && (points[i] == points[i - 1]))
                         || (points[i] == INFINITY))
                 {
                     continue;
                 }
+                pointMap = generatePointMap(points[i],upperRow,centerRow,lowerRow);
                 if (!newPoints.contains(points[i] - 1)) {
-                    if (checkPoint(points[i] - 1, upperRow, centerRow, lowerRow)) {
+                    if (checkPoint(-1, pointMap)) {
                         newPoints.add(points[i] - 1);
                     }
                 }
-                if (checkPoint(points[i], upperRow, centerRow, lowerRow)) {
+                if (checkPoint(0, pointMap)) {
                     newPoints.add(points[i]);
                 }
                 if (!newPoints.contains(points[i] + 1)) {
-                    if (checkPoint(points[i] + 1, upperRow, centerRow, lowerRow)) {
+                    if (checkPoint(1, pointMap)) {
                         newPoints.add(points[i] + 1);
                     }
                 }
@@ -219,26 +224,77 @@ public class Main {
     }
 
     /***
-     * Checks if the cell is alive in the next generation
-     * @param x x coordinate of the point
+     * Generate array with point status (alive or dead)
+     * around point with coordinate x
+     * @param x
      * @param upperRow
      * @param centerRow
      * @param lowerRow
+     * @return point status array
+     */
+    public int[][] generatePointMap(int x, PointRow upperRow, PointRow centerRow, PointRow lowerRow)
+    {
+        int[][] map = new int[3][5];
+        rowMap(upperRow, map, x,0);
+        rowMap(centerRow, map, x,1);
+        rowMap(lowerRow, map, x,2);
+        return map;
+    }
+
+    /***
+     * Fill point map row
+     * @param map point status array
+     * @param i row number
+     */
+    public void rowMap(PointRow row, int[][] map, int x, int i)
+    {
+        if (row!=null) {
+            int index = Collections.binarySearch(row, x - 2);
+            if (index < 0) {
+                index = index * -1 - 1;
+            } else {
+                map[i][0] = 1;
+            }
+            while ((index <= row.size()-1) && (row.get(index) <= x + 2)) {
+
+                if (row.get(index) == x - 1) {
+                    map[i][1] = 1;
+                } else {
+                    if (row.get(index) == x) {
+                        map[i][2] = 1;
+                    } else {
+                        if (row.get(index) == x + 1) {
+                            map[i][3] = 1;
+                        } else {
+                            if (row.get(index) == x + 2) {
+                                map[i][4] = 1;
+                            }
+                        }
+                    }
+                }
+                index++;
+            }
+        }
+    }
+
+    /***
+     * Checks if the cell is alive in the next generation
      * @return if cell is alive true else false
      */
-    public boolean checkPoint(int x, PointRow upperRow, PointRow centerRow, PointRow lowerRow)
+    public boolean checkPoint(int dc, int[][] pointMap)
     {
-        int neibhors = checkNeibhors(x, upperRow, centerRow, lowerRow);
+        int index = 2 + dc;
+        int neighbors = checkNeighbors(pointMap, index);
 
-        if ((centerRow != null) && (Collections.binarySearch(centerRow, x) >= 0)) {
-            if ((neibhors == 3)
-                    || (neibhors == 2)) {
+        if (pointMap[1][index] == 1) {
+            if ((neighbors == 3)
+                    || (neighbors == 2)) {
                 return true;
             } else {
                 return false;
             }
         } else {
-            if (neibhors == 3) {
+            if (neighbors == 3) {
                 return true;
             } else {
                 return false;
@@ -246,64 +302,16 @@ public class Main {
         }
     }
 
-    /***
-     * Counts alive neighbors of a point with coordinate x
-     * @param x x coordinate of the point
-     * @param upperRow
-     * @param centerRow
-     * @param lowerRow
-     * @return Count of alive neighbors of a point
-     */
-    public int checkNeibhors(int x, PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
+    public int checkNeighbors(int [][] pointMap, int index) {
         int sum = 0;
-        sum += rowSum(upperRow, x);
-        if (centerRow != null) {
-            sum += (Collections.binarySearch(centerRow, x + 1) >= 0) ? 1 : 0;
-            sum += (Collections.binarySearch(centerRow, x - 1) >= 0) ? 1 : 0;
-        }
-        sum += rowSum(lowerRow, x);
-        return sum;
-    }
-
-    /***
-     * Counts alive points in row
-     * @param row
-     * @param x
-     * @return Count of alive points
-     */
-    public int rowSum(PointRow row, int x) {
-        int sum = 0;
-        int index;
-
-        /**
-         * Searching central point by binary search
-         * if point is existing searching her left and right
-         * neibhors by index else searching
-         * left and right points by binary search
-         */
-
-        if (row != null) {
-            index = Collections.binarySearch(row, x);
-            if (index >= 0) {
-                if (index < row.size() - 1) {
-                    sum += (row.get(index + 1) - 1 == x) ? 1 : 0;
-                }
-                sum++;
-                if (index != 0) {
-                    sum += (row.get(index - 1) + 1 == x) ? 1 : 0;
-                }
-            } else {
-                index = Collections.binarySearch(row, x + 1);
-                if (index >= 0) {
-                    sum++;
-                    if (index != 0) {
-                        sum += (row.get(index - 1) + 2 == row.get(index)) ? 1 : 0;
-                    }
-                } else {
-                    sum += (Collections.binarySearch(row, x - 1) >= 0) ? 1 : 0;
-                }
-            }
-        }
+        sum += pointMap[0][index - 1]
+                + pointMap[0][index]
+                + pointMap[0][index + 1]
+                + pointMap[1][index - 1]
+                + pointMap[1][index + 1]
+                + pointMap[2][index - 1]
+                + pointMap[2][index]
+                + pointMap[2][index + 1];
         return sum;
     }
 
