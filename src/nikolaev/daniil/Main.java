@@ -23,7 +23,7 @@ public class Main {
     double dr = 0.01;
 
     List<PointRow> population = new ArrayList<>();
-    double radius = 0.001;
+    double radius = 0.1;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -95,19 +95,21 @@ public class Main {
             cy = ry;
             if (rowIterator.hasNext()) {
                 ry = rowIterator.next();
-
                 if (cy != null) {
                     if (cy.index + 1 != ry.index) {
                         ry = null;
                         rowIterator.previous();
                     }
-
                 } else {
                     if (ly != null) {
                         if (ly.index + 2 != ry.index) {
                             ry = null;
                             rowIterator.previous();
                         }
+                    }
+                    else
+                    {
+                        index=ry.index-1;
                     }
                 }
             } else {
@@ -116,7 +118,7 @@ public class Main {
             }
             PointRow r = genNewRow(index, ly, cy, ry);
             if (r.size() > 0) {
-                newGen.add(genNewRow(index, ly, cy, ry));
+                newGen.add(r);
             }
             index++;
         }
@@ -309,7 +311,7 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/C4Diag.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/lineship1.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
