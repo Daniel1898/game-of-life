@@ -31,9 +31,9 @@ public class Main {
 
 
     /***
-     * Установка параметров отрисовки
+     * Setting drawing options
      */
-    public void setCanvasSettings() {
+    public void setCanvasOptions() {
         StdDraw.setCanvasSize(MAX_WIDTH, MAX_HEIGHT);
         StdDraw.setXscale(MIN_WIDTH, MAX_WIDTH);
         StdDraw.setYscale(MAX_HEIGHT, MIN_HEIGHT);
@@ -41,6 +41,9 @@ public class Main {
         StdDraw.clear(Color.WHITE);
     }
 
+    /***
+     * Container to storing the coordinate of a points
+     */
     public class PointRow extends ArrayList<Integer> implements Comparable<Integer> {
         int index;
 
@@ -71,6 +74,10 @@ public class Main {
         }
     }
 
+    /***
+     * Generate new generation of points
+     * @return list of PointRow
+     */
     public List<PointRow> generate() {
         genCount++;
         List<PointRow> newGen = new ArrayList<>();
@@ -116,6 +123,14 @@ public class Main {
         return newGen;
     }
 
+    /***
+     *
+     * @param index
+     * @param up
+     * @param c
+     * @param down
+     * @return
+     */
     public PointRow genNewRow(int index, PointRow up, PointRow c, PointRow down) {
         PointRow newRow = new PointRow(index);
         Set<Integer> newPoints = new TreeSet<>();
@@ -213,17 +228,17 @@ public class Main {
 
     public int checkNeibhors(int x, PointRow up, PointRow c, PointRow down) {
         int sum = 0;
-        sum+=rowSum(up,x);
+        sum += rowSum(up, x);
         if (c != null) {
             sum += (Collections.binarySearch(c, x + 1) >= 0) ? 1 : 0;
             sum += (Collections.binarySearch(c, x - 1) >= 0) ? 1 : 0;
         }
-        sum+=rowSum(down,x);
+        sum += rowSum(down, x);
         return sum;
     }
 
-    public int rowSum(PointRow row,int x) {
-        int sum=0;
+    public int rowSum(PointRow row, int x) {
+        int sum = 0;
         int index;
         if (row != null) {
             index = Collections.binarySearch(row, x);
@@ -236,21 +251,20 @@ public class Main {
                     sum += (row.get(index - 1) + 1 == x) ? 1 : 0;
                 }
             } else {
-                index=Collections.binarySearch(row, x + 1);
-                if (index>=0)
-                {
+                index = Collections.binarySearch(row, x + 1);
+                if (index >= 0) {
                     sum++;
                     if (index != 0) {
                         sum += (row.get(index - 1) + 2 == row.get(index)) ? 1 : 0;
                     }
-                } else
-                {
+                } else {
                     sum += (Collections.binarySearch(row, x - 1) >= 0) ? 1 : 0;
                 }
             }
         }
         return sum;
     }
+
     public void fileStringProcessing(String str) {
         int len = str.length();
 
@@ -295,7 +309,7 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/C4Diag.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -347,7 +361,7 @@ public class Main {
     }
 
     public void start() {
-        setCanvasSettings();
+        setCanvasOptions();
         try {
             fileRead();
             draw();
