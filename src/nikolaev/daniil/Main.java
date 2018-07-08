@@ -13,11 +13,7 @@ import java.util.List;
 
 import edu.princeton.cs.introcs.StdDraw;
 import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.list.linked.TIntLinkedList;
-import gnu.trove.set.hash.TIntHashSet;
-
 
 
 public class Main {
@@ -26,16 +22,17 @@ public class Main {
     public static final int MIN_WIDTH = -10;
     public static final int MIN_HEIGHT = -10;
     public static final int OFFSET = 10;
-
+    public static final int INFINITY = -999999999;
 
 
     double dx = 0;
     double dy = 0;
     double dr = 0.01;
 
+
     List<PointRow> population = new ArrayList<>();
 
-    double radius = 0.1;
+    double radius = 0.001;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -72,22 +69,23 @@ public class Main {
 
 
     public void draw() {
-
+        boolean f = (radius <= 0.25);
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
         for (PointRow y : population) {
             if (((2 * radius * (y.index + dy)) >= MIN_HEIGHT)
                     && ((2 * radius * (y.index + dy)) <= MAX_HEIGHT)) {
                 y.forEach((int x) -> {
-                    if (((2 * radius * (x + dx)) >= MIN_WIDTH)
-                            && ((2 * radius * (x + dx)) <= MAX_WIDTH)) {
-                        StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius, radius);
+                    if (!f || (x % 2 != 0)) {
+                        if (((2 * radius * (x + dx)) >= MIN_WIDTH)
+                                && ((2 * radius * (x + dx)) <= MAX_WIDTH)) {
+                            StdDraw.filledSquare(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius);
+                        }
                     }
                     return true;
                 });
             }
         }
-
     }
 
     /***
@@ -103,7 +101,6 @@ public class Main {
         PointRow lowerRow = null;
         int index = (population.isEmpty()) ? 0 : population.get(0).index - 1;
         int lastLine = 2;
-
 
         ListIterator<PointRow> rowIterator = population.listIterator();
         while ((rowIterator.hasNext()) || (lastLine != 0)) {
@@ -127,145 +124,158 @@ public class Main {
                 newGen.add(newRow);
             }
             index++;
-
-
         }
         return newGen;
     }
 
     /***
-     * Generate new row this points
+     * Generate new row with points
      * @param index row number
-     * @param upperRow
-     * @param centerRow
-     * @param lowerRow
+     * @param upperRow row above processing row
+     * @param centerRow processing row
+     * @param lowerRow row under processing row
      * @return generated PointRow
      */
-    public PointRow genNewRow(int index, PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
-        PointRow newRow = new PointRow(index);
-        TIntHashSet newPoints = new TIntHashSet();
-        TIntHashSet foo= new TIntHashSet();
-        TIntArrayList foo1= new TIntArrayList();
-
-        addRowToArray(upperRow,foo1,foo);
-        addRowToArray(centerRow,foo1,foo);
-        addRowToArray(lowerRow,foo1,foo);
-
-        foo1.sort();
-
-
-        rowProcessing(foo1.iterator(), upperRow, centerRow, lowerRow, newPoints, newRow);
-
-
-        //newRow.sort();
-        return newRow;
-    }
-
-    public void addRowToArray(PointRow row, TIntArrayList foo1, TIntHashSet foo)
-    {
-        if (row!=null) {
-            row.forEach((i)->{
-                if (!foo.contains(i))
-                {
-                    foo.add(i);
-                    foo1.add(i);
-                }
-                return true;
-            });
-        }
-
-    }
-
-
-    public void rowProcessing(TIntIterator p,
+    public PointRow genNewRow(int index,
                               PointRow upperRow,
                               PointRow centerRow,
-                              PointRow lowerRow,
-                              TIntHashSet alivePoints,
-                              TIntArrayList newRow)
-    {
+                              PointRow lowerRow) {
+
+        PointRow newRow = new PointRow(index);
         int[][] pointMap = new int[3][5];
         int prevX;
         int x = 0;
         int[] prevIndex = new int[3];
         boolean firstIter = true;
+        int[] prev= new int[] {INFINITY, INFINITY};
+
+        TIntIterator p = mergeRows(upperRow, centerRow, lowerRow);
+
         while (p.hasNext()) {
             if (firstIter)
             {
-                prevX =p.next();
-                x=prevX;
-                firstIter=false;
+                prevX = p.next();
+                x = prevX;
+                firstIter = false;
             }
             else
             {
-                prevX=x;
+                prevX = x;
                 x = p.next();
             }
-
             pointMap = generatePointMap(x, prevX, prevIndex, upperRow, centerRow, lowerRow, pointMap);
             for (int i = -1; i <= 1; i++) {
-                if (!alivePoints.contains(x + i)) {
-                    if (addPointToRow(x, i, newRow, pointMap)) {
-                        alivePoints.add(x + i);
-                    }
+                if ((prev[0]!= (x + i)) && (prev[1]!= (x + i))) {
+                    addPointToRow(x, i, newRow, pointMap);
+                    prev[0]=prev[1];
+                    prev[1]= x + i;
                 }
             }
         }
 
-
-
-    }
-
-    public boolean addPointToRow(int x, int dc, TIntArrayList newRow, int [][] pointMap)
-    {
-            if (checkPoint(dc, pointMap)) {
-                newRow.add(x + dc);
-                return true;
-            } else
-            {
-                return false;
-            }
-
+        return newRow;
     }
 
     /***
-     * Generate array with point status (alive or dead)
-     * around point with coordinate x
+     * Merge sort and delete repetition of points
+     * @param upperRow row above processing row
+     * @param centerRow processing row
+     * @param lowerRow row under processing row
+     * @return Iterator of merged rows
+     */
+    private TIntIterator mergeRows(PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
+        TIntArrayList alivePoints = new TIntArrayList();
+        addToList(upperRow, alivePoints);
+        addToList(centerRow, alivePoints);
+        addToList(lowerRow, alivePoints);
+        return alivePoints.iterator();
+    }
+
+    /***
+     * Adding row elements to array without repeated elements
+     */
+    public void addToList(PointRow row, TIntArrayList list)
+    {
+        if (row != null) {
+            row.forEach((i) -> {
+                int p = list.binarySearch(i);
+                if (p < 0) {
+                    if (p < list.size()) {
+                        list.insert(-p - 1, i);
+                    } else {
+                        list.add(i);
+                    }
+                }
+                return true;
+            });
+        }
+    }
+
+    /**
+     * Adding point to row with coordinate x + dx
      * @param x
-     * @param upperRow
-     * @param centerRow
-     * @param lowerRow
+     * @param dx deviation from x
+     * @param newRow row to adding points
+     * @param pointMap
+     */
+    public void addPointToRow(int x,
+                              int dx,
+                              TIntArrayList newRow,
+                              int [][] pointMap)
+    {
+            if (checkPoint(dx, pointMap)) {
+                newRow.add(x + dx);
+            }
+    }
+
+
+    /***
+     * Generate array with statuses (alive or dead) of point with
+     * coordinate x and her neighbors
+     * @param x coordinate of central point
+     * @param upperRow row above processing row
+     * @param centerRow processing row
+     * @param lowerRow row under processing row
      * @return point status array
      */
-    public int[][] generatePointMap(int x, int prevX,int[] prevIndex, PointRow upperRow, PointRow centerRow, PointRow lowerRow, int[][] prevMap)
+    public int[][] generatePointMap(int x,
+                                    int prevX,
+                                    int[] prevIndex,
+                                    PointRow upperRow,
+                                    PointRow centerRow,
+                                    PointRow lowerRow,
+                                    int[][] prevMap)
     {
 
         int[][] map = new int[3][5];
-        int index=0;
+        int index = 0;
 
-        if (x-prevX>0 && x-prevX<5)
-        {
-            int k=0;
-            for (int i=x-prevX;i<5;i++)
-            {
-                map[0][k]= prevMap[0][i];
-                map[1][k]= prevMap[1][i];
-                map[2][k]= prevMap[2][i];
+        if ((x - prevX > 0) && (x - prevX < 5)) {
+            int k = 0;
+            for (int i = x - prevX; i < 5; i++) {
+                map[0][k] = prevMap[0][i];
+                map[1][k] = prevMap[1][i];
+                map[2][k] = prevMap[2][i];
                 k++;
             }
-            index=5 - (x-prevX);
+            index = 5 - (x - prevX);
         }
-        prevIndex[0]=rowMap(upperRow, map[0], x, index,prevIndex[0]);
-        prevIndex[1]=rowMap(centerRow, map[1], x, index,prevIndex[1]);
-        prevIndex[2]=rowMap(lowerRow, map[2], x, index,prevIndex[2]);
+
+        prevIndex[0] = rowMap(upperRow, map[0], x, index, prevIndex[0]);
+        prevIndex[1] = rowMap(centerRow, map[1], x, index, prevIndex[1]);
+        prevIndex[2] = rowMap(lowerRow, map[2], x, index, prevIndex[2]);
 
         return map;
     }
 
-    /***
+    /**
      * Fill point map row
-     * @param map point status array
-     *
+     * @param row row with points
+     * @param map point map row
+     * @param x coordinate x of central point (point with index 2)
+     * @param j number of points with known state
+     * @param prevIndex start index of searching alive points in row
+     * @return index of last checked point +1
      */
     public int rowMap(PointRow row, int[] map, int x, int j, int prevIndex) {
         int index;
@@ -286,39 +296,40 @@ public class Main {
 
     /***
      * Checks if the cell is alive in the next generation
+     * @param dx deviation from center point map row
+     * @param pointMap array with statuses (alive or dead) of point with
+     * coordinate x and her neighbors
      * @return if cell is alive true else false
      */
-    public boolean checkPoint(int dc, int[][] pointMap)
+    public boolean checkPoint(int dx, int[][] pointMap)
     {
-        int index = 2 + dc;
+        int index = 2 + dx;
         int neighbors = checkNeighbors(pointMap, index);
 
         if (pointMap[1][index] == 1) {
-            if ((neighbors == 3)
-                    || (neighbors == 2)) {
-                return true;
-            } else {
-                return false;
-            }
+            return (neighbors == 3)
+                    || (neighbors == 2);
         } else {
-            if (neighbors == 3) {
-                return true;
-            } else {
-                return false;
-            }
+            return neighbors == 3;
         }
     }
 
-    public int checkNeighbors(int [][] pointMap, int index) {
+    /***
+     *  Calculating sum of neighbors of point with coordinate x
+     * @param pointMap array with statuses (alive or dead) of point with
+     * coordinate x and her neighbors
+     * @param x coordinate of point
+     * @return sum of neighbors of point with coordinate x
+     */
+    public int checkNeighbors(int [][] pointMap, int x) {
         int sum = 0;
-        sum += pointMap[0][index - 1]
-                + pointMap[0][index]
-                + pointMap[0][index + 1]
-                + pointMap[1][index - 1]
-                + pointMap[1][index + 1]
-                + pointMap[2][index - 1]
-                + pointMap[2][index]
-                + pointMap[2][index + 1];
+        for (int i = 0; i < 3; i++) {
+            for (int j = -1; j <= 1; j++) {
+                if ((i != 1) || (j != 0)) {
+                    sum += pointMap[i][x + j];
+                }
+            }
+        }
         return sum;
     }
 
@@ -366,7 +377,7 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/w1.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -424,7 +435,6 @@ public class Main {
             while (true) {
                 long tStart = System.currentTimeMillis();
                 keys();
-
                 population = generate();
                 draw();
                 long tFrame = System.currentTimeMillis() - tStart;
