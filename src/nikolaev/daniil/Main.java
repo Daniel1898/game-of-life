@@ -9,7 +9,16 @@ import java.nio.file.*;
 import java.util.List;
 
 
+
+
 import edu.princeton.cs.introcs.StdDraw;
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.linked.TIntLinkedList;
+import gnu.trove.set.hash.TIntHashSet;
+
+
 
 public class Main {
     public static final int MAX_WIDTH = 1200;
@@ -17,7 +26,7 @@ public class Main {
     public static final int MIN_WIDTH = -10;
     public static final int MIN_HEIGHT = -10;
     public static final int OFFSET = 10;
-    public static final int INFINITY= -999999999;
+
 
 
     double dx = 0;
@@ -25,7 +34,8 @@ public class Main {
     double dr = 0.01;
 
     List<PointRow> population = new ArrayList<>();
-    double radius = 0.001;
+
+    double radius = 0.1;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -46,7 +56,7 @@ public class Main {
     /***
      * Container to storing the coordinate of a points
      */
-    public class PointRow extends ArrayList<Integer> implements Comparable<Integer> {
+    public class PointRow extends TIntArrayList implements Comparable<Integer> {
         int index;
 
         PointRow(int index) {
@@ -62,18 +72,22 @@ public class Main {
 
 
     public void draw() {
+
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
         for (PointRow y : population) {
             if (((2 * radius * (y.index + dy)) >= MIN_HEIGHT)
-                    && ((2 * radius * (y.index + dy)) <= MAX_HEIGHT))
-                for (int x : y) {
+                    && ((2 * radius * (y.index + dy)) <= MAX_HEIGHT)) {
+                y.forEach((int x) -> {
                     if (((2 * radius * (x + dx)) >= MIN_WIDTH)
                             && ((2 * radius * (x + dx)) <= MAX_WIDTH)) {
                         StdDraw.filledRectangle(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius, radius);
                     }
-                }
+                    return true;
+                });
+            }
         }
+
     }
 
     /***
@@ -81,14 +95,15 @@ public class Main {
      * @return list of PointRow
      */
     public List<PointRow> generate() {
+
         genCount++;
         List<PointRow> newGen = new ArrayList<>();
         PointRow upperRow = null;
         PointRow centerRow = null;
         PointRow lowerRow = null;
-
         int index = (population.isEmpty()) ? 0 : population.get(0).index - 1;
         int lastLine = 2;
+
 
         ListIterator<PointRow> rowIterator = population.listIterator();
         while ((rowIterator.hasNext()) || (lastLine != 0)) {
@@ -96,20 +111,12 @@ public class Main {
             centerRow = lowerRow;
             if (rowIterator.hasNext()) {
                 lowerRow = rowIterator.next();
-                if (centerRow != null) {
-                    if ((centerRow.index + 1) != lowerRow.index) {
-                        lowerRow = null;
-                        rowIterator.previous();
-                    }
+                if (((upperRow != null) && ((upperRow.index + 2) != lowerRow.index))
+                        || ((centerRow != null) && ((centerRow.index + 1) != lowerRow.index))) {
+                    lowerRow = null;
+                    rowIterator.previous();
                 } else {
-                    if (upperRow != null) {
-                        if ((upperRow.index + 2) != lowerRow.index) {
-                            lowerRow = null;
-                            rowIterator.previous();
-                        }
-                    } else {
-                        index = lowerRow.index - 1;
-                    }
+                    index = lowerRow.index - 1;
                 }
             } else {
                 lowerRow = null;
@@ -120,6 +127,8 @@ public class Main {
                 newGen.add(newRow);
             }
             index++;
+
+
         }
         return newGen;
     }
@@ -134,93 +143,89 @@ public class Main {
      */
     public PointRow genNewRow(int index, PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
         PointRow newRow = new PointRow(index);
-        Set<Integer> newPoints = new TreeSet<>();
-        int[] points = new int[3];
-        int[][] pointMap;
-        Iterator<Integer> upperRowIt = (upperRow != null) ? upperRow.iterator() : new Iterator<Integer>() {
-            @Override
-            public boolean hasNext() {
+        TIntHashSet newPoints = new TIntHashSet();
+        TIntHashSet foo= new TIntHashSet();
+        TIntArrayList foo1= new TIntArrayList();
 
-                return false;
-            }
+        addRowToArray(upperRow,foo1,foo);
+        addRowToArray(centerRow,foo1,foo);
+        addRowToArray(lowerRow,foo1,foo);
 
-            @Override
-            public Integer next() {
-
-                return 0;
-            }
-        };
-        Iterator<Integer> centerRowIt = (centerRow != null) ? centerRow.iterator() : new Iterator<Integer>() {
-            @Override
-            public boolean hasNext() {
-
-                return false;
-            }
-
-            @Override
-            public Integer next() {
-
-                return 0;
-            }
-        };
-        Iterator<Integer> lowerRowIt = (lowerRow != null) ? lowerRow.iterator() : new Iterator<Integer>() {
-            @Override
-            public boolean hasNext() {
-
-                return false;
-            }
-
-            @Override
-            public Integer next() {
-
-                return 0;
-            }
-        };
+        foo1.sort();
 
 
-        while (upperRowIt.hasNext() || centerRowIt.hasNext() || lowerRowIt.hasNext()) {
-            if (upperRowIt.hasNext()) {
-                points[0] = upperRowIt.next();
-            } else {
-                points[0] = INFINITY;
-            }
-            if (centerRowIt.hasNext()) {
-                points[1] = centerRowIt.next();
-            } else {
-                points[1] = INFINITY;
-            }
-            if (lowerRowIt.hasNext()) {
-                points[2] = lowerRowIt.next();
-            } else {
-                points[2] = INFINITY;
-            }
+        rowProcessing(foo1.iterator(), upperRow, centerRow, lowerRow, newPoints, newRow);
 
-            Arrays.sort(points);
 
-            for (int i = 0; i < 3; i++) {
-                if (((i != 0) && (points[i] == points[i - 1]))
-                        || (points[i] == INFINITY))
+        //newRow.sort();
+        return newRow;
+    }
+
+    public void addRowToArray(PointRow row, TIntArrayList foo1, TIntHashSet foo)
+    {
+        if (row!=null) {
+            row.forEach((i)->{
+                if (!foo.contains(i))
                 {
-                    continue;
+                    foo.add(i);
+                    foo1.add(i);
                 }
-                pointMap = generatePointMap(points[i],upperRow,centerRow,lowerRow);
-                if (!newPoints.contains(points[i] - 1)) {
-                    if (checkPoint(-1, pointMap)) {
-                        newPoints.add(points[i] - 1);
-                    }
-                }
-                if (checkPoint(0, pointMap)) {
-                    newPoints.add(points[i]);
-                }
-                if (!newPoints.contains(points[i] + 1)) {
-                    if (checkPoint(1, pointMap)) {
-                        newPoints.add(points[i] + 1);
+                return true;
+            });
+        }
+
+    }
+
+
+    public void rowProcessing(TIntIterator p,
+                              PointRow upperRow,
+                              PointRow centerRow,
+                              PointRow lowerRow,
+                              TIntHashSet alivePoints,
+                              TIntArrayList newRow)
+    {
+        int[][] pointMap = new int[3][5];
+        int prevX;
+        int x = 0;
+        int[] prevIndex = new int[3];
+        boolean firstIter = true;
+        while (p.hasNext()) {
+            if (firstIter)
+            {
+                prevX =p.next();
+                x=prevX;
+                firstIter=false;
+            }
+            else
+            {
+                prevX=x;
+                x = p.next();
+            }
+
+            pointMap = generatePointMap(x, prevX, prevIndex, upperRow, centerRow, lowerRow, pointMap);
+            for (int i = -1; i <= 1; i++) {
+                if (!alivePoints.contains(x + i)) {
+                    if (addPointToRow(x, i, newRow, pointMap)) {
+                        alivePoints.add(x + i);
                     }
                 }
             }
         }
-        newRow.addAll(newPoints);
-        return newRow;
+
+
+
+    }
+
+    public boolean addPointToRow(int x, int dc, TIntArrayList newRow, int [][] pointMap)
+    {
+            if (checkPoint(dc, pointMap)) {
+                newRow.add(x + dc);
+                return true;
+            } else
+            {
+                return false;
+            }
+
     }
 
     /***
@@ -232,49 +237,51 @@ public class Main {
      * @param lowerRow
      * @return point status array
      */
-    public int[][] generatePointMap(int x, PointRow upperRow, PointRow centerRow, PointRow lowerRow)
+    public int[][] generatePointMap(int x, int prevX,int[] prevIndex, PointRow upperRow, PointRow centerRow, PointRow lowerRow, int[][] prevMap)
     {
+
         int[][] map = new int[3][5];
-        rowMap(upperRow, map, x,0);
-        rowMap(centerRow, map, x,1);
-        rowMap(lowerRow, map, x,2);
+        int index=0;
+
+        if (x-prevX>0 && x-prevX<5)
+        {
+            int k=0;
+            for (int i=x-prevX;i<5;i++)
+            {
+                map[0][k]= prevMap[0][i];
+                map[1][k]= prevMap[1][i];
+                map[2][k]= prevMap[2][i];
+                k++;
+            }
+            index=5 - (x-prevX);
+        }
+        prevIndex[0]=rowMap(upperRow, map[0], x, index,prevIndex[0]);
+        prevIndex[1]=rowMap(centerRow, map[1], x, index,prevIndex[1]);
+        prevIndex[2]=rowMap(lowerRow, map[2], x, index,prevIndex[2]);
+
         return map;
     }
 
     /***
      * Fill point map row
      * @param map point status array
-     * @param i row number
+     *
      */
-    public void rowMap(PointRow row, int[][] map, int x, int i)
-    {
-        if (row!=null) {
-            int index = Collections.binarySearch(row, x - 2);
-            if (index < 0) {
-                index = index * -1 - 1;
-            } else {
-                map[i][0] = 1;
-            }
-            while ((index <= row.size()-1) && (row.get(index) <= x + 2)) {
-
-                if (row.get(index) == x - 1) {
-                    map[i][1] = 1;
-                } else {
-                    if (row.get(index) == x) {
-                        map[i][2] = 1;
-                    } else {
-                        if (row.get(index) == x + 1) {
-                            map[i][3] = 1;
-                        } else {
-                            if (row.get(index) == x + 2) {
-                                map[i][4] = 1;
-                            }
-                        }
+    public int rowMap(PointRow row, int[] map, int x, int j, int prevIndex) {
+        int index;
+        if (row != null) {
+            index = prevIndex;
+            while ((index <= row.size() - 1) && (row.get(index) <= x + 2)) {
+                for (int i = j; i < 5; i++) {
+                    if (row.get(index) == x + i - 2) {
+                        map[i] = 1;
                     }
                 }
                 index++;
             }
+            return index;
         }
+        return prevIndex;
     }
 
     /***
@@ -359,7 +366,7 @@ public class Main {
      */
     public void fileRead() throws IOException {
         BufferedReader bReader =
-                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/caterpillar.rle"));
+                Files.newBufferedReader(Paths.get("/home/daniel/IdeaProjects/game of life/populations/w1.rle"));
         fx = 0;
         fy = 0;
         int k = 0;
@@ -407,6 +414,7 @@ public class Main {
 
     }
 
+
     public void start() {
         setCanvasOptions();
         try {
@@ -446,5 +454,3 @@ public class Main {
     }
 
 }
-
-
