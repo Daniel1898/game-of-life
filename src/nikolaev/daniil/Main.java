@@ -1,19 +1,19 @@
 package nikolaev.daniil;
 
+import edu.princeton.cs.introcs.StdDraw;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntIterators;
+
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
-
-
-
-
-import edu.princeton.cs.introcs.StdDraw;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.array.TIntArrayList;
+import java.util.ListIterator;
 
 
 public class Main {
@@ -22,7 +22,7 @@ public class Main {
     public static final int MIN_WIDTH = -10;
     public static final int MIN_HEIGHT = -10;
     public static final int OFFSET = 10;
-    public static final int INFINITY = -999999999;
+    public static final int INFINITY = 999999999;
 
 
     double dx = 0;
@@ -32,7 +32,7 @@ public class Main {
 
     List<PointRow> population = new ArrayList<>();
 
-    double radius = 0.001;
+    double radius = 0.01;
     int fx = 0;
     int fy = 0;
     int pointCount;
@@ -53,37 +53,41 @@ public class Main {
     /***
      * Container to storing the coordinate of a points
      */
-    public class PointRow extends TIntArrayList implements Comparable<Integer> {
+    public class PointRow extends IntArrayList {
         int index;
 
         PointRow(int index) {
             super();
             this.index = index;
         }
-
-        @Override
-        public int compareTo(Integer integer) {
-            return integer.compareTo(index);
-        }
     }
 
 
     public void draw() {
-        boolean f = (radius <= 0.25);
+        boolean ff;
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
         for (PointRow y : population) {
             if (((2 * radius * (y.index + dy)) >= MIN_HEIGHT)
                     && ((2 * radius * (y.index + dy)) <= MAX_HEIGHT)) {
-                y.forEach((int x) -> {
-                    if (!f || (x % 2 != 0)) {
+                ff = false;
+                for (int x:y)
+                {
+                    if (radius > 0.25 || !ff) {
                         if (((2 * radius * (x + dx)) >= MIN_WIDTH)
                                 && ((2 * radius * (x + dx)) <= MAX_WIDTH)) {
                             StdDraw.filledSquare(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius);
+                            ff = true;
                         }
+                        else
+                        {
+                            ff = false;
+                        }
+                    } else
+                    {
+                        ff = false;
                     }
-                    return true;
-                });
+                }
             }
         }
     }
@@ -142,26 +146,26 @@ public class Main {
                               PointRow lowerRow) {
 
         PointRow newRow = new PointRow(index);
-        int[][] pointMap = new int[3][5];
+        byte[] pointMap = new byte[3];
         int prevX;
         int x = 0;
         int[] prevIndex = new int[3];
         boolean firstIter = true;
         int[] prev= new int[] {INFINITY, INFINITY};
 
-        TIntIterator p = mergeRows(upperRow, centerRow, lowerRow);
+        IntIterator p = mergeRows(upperRow, centerRow, lowerRow);
 
         while (p.hasNext()) {
             if (firstIter)
             {
-                prevX = p.next();
+                prevX = p.nextInt();
                 x = prevX;
                 firstIter = false;
             }
             else
             {
                 prevX = x;
-                x = p.next();
+                x = p.nextInt();
             }
             pointMap = generatePointMap(x, prevX, prevIndex, upperRow, centerRow, lowerRow, pointMap);
             for (int i = -1; i <= 1; i++) {
@@ -176,40 +180,40 @@ public class Main {
         return newRow;
     }
 
-    /***
-     * Merge sort and delete repetition of points
-     * @param upperRow row above processing row
-     * @param centerRow processing row
-     * @param lowerRow row under processing row
-     * @return Iterator of merged rows
-     */
-    private TIntIterator mergeRows(PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
-        TIntArrayList alivePoints = new TIntArrayList();
-        addToList(upperRow, alivePoints);
-        addToList(centerRow, alivePoints);
-        addToList(lowerRow, alivePoints);
-        return alivePoints.iterator();
+    private IntIterator mergeRows(PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
+        IntArrayList rez = new IntArrayList();
+        IntIterator uIt = (upperRow != null)? upperRow.iterator() : IntIterators.EMPTY_ITERATOR;
+        IntIterator cIt = (centerRow != null)? centerRow.iterator() : IntIterators.EMPTY_ITERATOR;
+        IntIterator lIt = (lowerRow != null)? lowerRow.iterator() : IntIterators.EMPTY_ITERATOR;
+        int n1 = (uIt.hasNext())? uIt.nextInt() : INFINITY;
+        int n2 = (cIt.hasNext())? cIt.nextInt() : INFINITY;
+        int n3 = (lIt.hasNext())? lIt.nextInt() : INFINITY;
+        int min = Math.min(Math.min(n1, n2), n3);;
+        int last = INFINITY;
+        while (min != INFINITY)
+        {
+            if (last != min)
+            {
+                rez.add(min);
+                last = min;
+            }
+            if (n1 == min)
+            {
+                n1 = (uIt.hasNext())? uIt.nextInt() : INFINITY;
+            }
+            if (n2 == min)
+            {
+                n2 = (cIt.hasNext())? cIt.nextInt() : INFINITY;
+            }
+            if (n3 == min)
+            {
+                n3 = (lIt.hasNext())? lIt.nextInt() : INFINITY;
+            }
+            min = Math.min(Math.min(n1, n2), n3);
+        }
+        return rez.iterator();
     }
 
-    /***
-     * Adding row elements to array without repeated elements
-     */
-    public void addToList(PointRow row, TIntArrayList list)
-    {
-        if (row != null) {
-            row.forEach((i) -> {
-                int p = list.binarySearch(i);
-                if (p < 0) {
-                    if (p < list.size()) {
-                        list.insert(-p - 1, i);
-                    } else {
-                        list.add(i);
-                    }
-                }
-                return true;
-            });
-        }
-    }
 
     /**
      * Adding point to row with coordinate x + dx
@@ -220,8 +224,8 @@ public class Main {
      */
     public void addPointToRow(int x,
                               int dx,
-                              TIntArrayList newRow,
-                              int [][] pointMap)
+                              IntArrayList newRow,
+                              byte[] pointMap)
     {
             if (checkPoint(dx, pointMap)) {
                 newRow.add(x + dx);
@@ -238,32 +242,33 @@ public class Main {
      * @param lowerRow row under processing row
      * @return point status array
      */
-    public int[][] generatePointMap(int x,
+    public byte[] generatePointMap(int x,
                                     int prevX,
                                     int[] prevIndex,
                                     PointRow upperRow,
                                     PointRow centerRow,
                                     PointRow lowerRow,
-                                    int[][] prevMap)
+                                    byte[] map)
     {
 
-        int[][] map = new int[3][5];
-        int index = 0;
 
+        int index = 0;
         if ((x - prevX > 0) && (x - prevX < 5)) {
-            int k = 0;
-            for (int i = x - prevX; i < 5; i++) {
-                map[0][k] = prevMap[0][i];
-                map[1][k] = prevMap[1][i];
-                map[2][k] = prevMap[2][i];
-                k++;
+            int k = x - prevX;
+            for (int i = 0; i < 3; i++) {
+                map[i] = (byte) ((map[i] << k) & 0b11111);
             }
             index = 5 - (x - prevX);
+        } else
+        {
+            for (int i = 0; i < 3; i++) {
+                map[i] = 0;
+            }
         }
 
-        prevIndex[0] = rowMap(upperRow, map[0], x, index, prevIndex[0]);
-        prevIndex[1] = rowMap(centerRow, map[1], x, index, prevIndex[1]);
-        prevIndex[2] = rowMap(lowerRow, map[2], x, index, prevIndex[2]);
+        prevIndex[0] = rowMap(upperRow, map, 0, x, index, prevIndex[0]);
+        prevIndex[1] = rowMap(centerRow, map ,1, x, index, prevIndex[1]);
+        prevIndex[2] = rowMap(lowerRow, map, 2, x, index, prevIndex[2]);
 
         return map;
     }
@@ -277,17 +282,24 @@ public class Main {
      * @param prevIndex start index of searching alive points in row
      * @return index of last checked point +1
      */
-    public int rowMap(PointRow row, int[] map, int x, int j, int prevIndex) {
+    public int rowMap(PointRow row, byte[] map, int i, int x, int j, int prevIndex) {
         int index;
         if (row != null) {
             index = prevIndex;
-            while ((index <= row.size() - 1) && (row.get(index) <= x + 2)) {
-                for (int i = j; i < 5; i++) {
-                    if (row.get(index) == x + i - 2) {
-                        map[i] = 1;
-                    }
+            int r;
+            while (index<row.size()) {
+                r = Math.abs(row.getInt(index) - x) + 2;
+                if (r >= j && r < 5)
+                {
+                   map[i] |= 16 >> r;
                 }
-                index++;
+                if (r < 5)
+                {
+                    index++;
+                } else
+                {
+                    break;
+                }
             }
             return index;
         }
@@ -301,12 +313,12 @@ public class Main {
      * coordinate x and her neighbors
      * @return if cell is alive true else false
      */
-    public boolean checkPoint(int dx, int[][] pointMap)
+    public boolean checkPoint(int dx, byte[] pointMap)
     {
         int index = 2 + dx;
         int neighbors = checkNeighbors(pointMap, index);
 
-        if (pointMap[1][index] == 1) {
+        if ((pointMap[1] & (16 >> index)) > 0) {
             return (neighbors == 3)
                     || (neighbors == 2);
         } else {
@@ -321,12 +333,12 @@ public class Main {
      * @param x coordinate of point
      * @return sum of neighbors of point with coordinate x
      */
-    public int checkNeighbors(int [][] pointMap, int x) {
+    public int checkNeighbors(byte[] pointMap, int x) {
         int sum = 0;
         for (int i = 0; i < 3; i++) {
             for (int j = -1; j <= 1; j++) {
-                if ((i != 1) || (j != 0)) {
-                    sum += pointMap[i][x + j];
+                if (((i != 1) || (j != 0)) && ((pointMap[i] & (16 >> (x + j))) > 0)) {
+                    sum += 1;
                 }
             }
         }
