@@ -4,6 +4,7 @@ import edu.princeton.cs.introcs.StdDraw;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
+import it.unimi.dsi.fastutil.ints.IntListIterator;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -64,28 +65,28 @@ public class Main {
 
 
     public void draw() {
-        boolean ff;
+        boolean flag; //true if previous point was drew
         StdDraw.clear(Color.white);
         StdDraw.setPenColor(Color.black);
         for (PointRow y : population) {
             if (((2 * radius * (y.index + dy)) >= MIN_HEIGHT)
                     && ((2 * radius * (y.index + dy)) <= MAX_HEIGHT)) {
-                ff = false;
+                flag = false;
                 for (int x:y)
                 {
-                    if (radius > 0.25 || !ff) {
+                    if (radius > 0.25 || !flag) {
                         if (((2 * radius * (x + dx)) >= MIN_WIDTH)
                                 && ((2 * radius * (x + dx)) <= MAX_WIDTH)) {
                             StdDraw.filledSquare(2 * radius * (x + dx), 2 * radius * (y.index + dy), radius);
-                            ff = true;
+                            flag = true;
                         }
                         else
                         {
-                            ff = false;
+                            flag = false;
                         }
                     } else
                     {
-                        ff = false;
+                        flag = false;
                     }
                 }
             }
@@ -104,7 +105,7 @@ public class Main {
         PointRow centerRow = null;
         PointRow lowerRow = null;
         int index = (population.isEmpty()) ? 0 : population.get(0).index - 1;
-        int lastLine = 2;
+        int lastLine = 2; //to generate two last rows
 
         ListIterator<PointRow> rowIterator = population.listIterator();
         while ((rowIterator.hasNext()) || (lastLine != 0)) {
@@ -114,7 +115,7 @@ public class Main {
                 lowerRow = rowIterator.next();
                 if (((upperRow != null) && ((upperRow.index + 2) != lowerRow.index))
                         || ((centerRow != null) && ((centerRow.index + 1) != lowerRow.index))) {
-                    lowerRow = null;
+                    lowerRow = null; // if row after centerRow doesn't exist
                     rowIterator.previous();
                 } else {
                     index = lowerRow.index - 1;
@@ -151,28 +152,43 @@ public class Main {
         int x = 0;
         int[] prevIndex = new int[3];
         boolean firstIter = true;
-        int[] prev= new int[] {INFINITY, INFINITY};
+        int[] prev= new int[] {INFINITY, INFINITY};//to remember two last added points
 
-        IntIterator p = mergeRows(upperRow, centerRow, lowerRow);
+        IntListIterator p = mergeRows((upperRow != null)? upperRow.iterator() : IntIterators.EMPTY_ITERATOR,
+                                        (centerRow != null)? centerRow.iterator() : IntIterators.EMPTY_ITERATOR,
+                                        (lowerRow != null)? lowerRow.iterator() : IntIterators.EMPTY_ITERATOR);
 
-        while (p.hasNext()) {
+        int nextX = (p.hasNext())? p.nextInt() : INFINITY;
+
+        while (nextX!=INFINITY) {
             if (firstIter)
             {
-                prevX = p.nextInt();
-                x = prevX;
+                prevX = nextX;
+                x = nextX;
+                nextX = (p.hasNext())? p.nextInt() : INFINITY;
                 firstIter = false;
             }
             else
             {
                 prevX = x;
-                x = p.nextInt();
+                x = nextX;
+                nextX = (p.hasNext())? p.nextInt() : INFINITY;
+                //skip repeating points
+                while ((x-1) <= prev[1])
+                {
+                    x++;
+                    if (x >= nextX)
+                    {
+                        nextX = (p.hasNext())? p.nextInt() : INFINITY;
+                    }
+                }
             }
             pointMap = generatePointMap(x, prevX, prevIndex, upperRow, centerRow, lowerRow, pointMap);
             for (int i = -1; i <= 1; i++) {
                 if ((prev[0]!= (x + i)) && (prev[1]!= (x + i))) {
                     addPointToRow(x, i, newRow, pointMap);
-                    prev[0]=prev[1];
-                    prev[1]= x + i;
+                    prev[0] = prev[1];
+                    prev[1] = x + i;
                 }
             }
         }
@@ -180,16 +196,24 @@ public class Main {
         return newRow;
     }
 
-    private IntIterator mergeRows(PointRow upperRow, PointRow centerRow, PointRow lowerRow) {
+    /**
+     * merge rows in one list
+     * @param uIt iterator of upperRow
+     * @param cIt iterator of centerRow
+     * @param lIt iterator of lowerRow
+     * @return iterator of result list
+     */
+    private IntListIterator mergeRows(IntIterator uIt, IntIterator cIt, IntIterator lIt) {
         IntArrayList rez = new IntArrayList();
-        IntIterator uIt = (upperRow != null)? upperRow.iterator() : IntIterators.EMPTY_ITERATOR;
-        IntIterator cIt = (centerRow != null)? centerRow.iterator() : IntIterators.EMPTY_ITERATOR;
-        IntIterator lIt = (lowerRow != null)? lowerRow.iterator() : IntIterators.EMPTY_ITERATOR;
+
+        //coordinates of points
         int n1 = (uIt.hasNext())? uIt.nextInt() : INFINITY;
         int n2 = (cIt.hasNext())? cIt.nextInt() : INFINITY;
         int n3 = (lIt.hasNext())? lIt.nextInt() : INFINITY;
+
         int min = Math.min(Math.min(n1, n2), n3);;
-        int last = INFINITY;
+        int last = INFINITY;//coordinate of last added point
+
         while (min != INFINITY)
         {
             if (last != min)
@@ -197,6 +221,7 @@ public class Main {
                 rez.add(min);
                 last = min;
             }
+
             if (n1 == min)
             {
                 n1 = (uIt.hasNext())? uIt.nextInt() : INFINITY;
@@ -214,10 +239,9 @@ public class Main {
         return rez.iterator();
     }
 
-
     /**
      * Adding point to row with coordinate x + dx
-     * @param x
+     * @param x coordinate of central point
      * @param dx deviation from x
      * @param newRow row to adding points
      * @param pointMap
@@ -253,12 +277,12 @@ public class Main {
 
 
         int index = 0;
-        if ((x - prevX > 0) && (x - prevX < 5)) {
+        if (((x - prevX) > 0) && ((x - prevX) < 5)) {
             int k = x - prevX;
             for (int i = 0; i < 3; i++) {
-                map[i] = (byte) ((map[i] << k) & 0b11111);
+                map[i] = (byte) ((map[i] << k) & 0b11111);//shift by the amount of deviation x and prevX
             }
-            index = 5 - (x - prevX);
+            index = 5 - (x - prevX);//number of the first unknown point in the map
         } else
         {
             for (int i = 0; i < 3; i++) {
@@ -280,20 +304,21 @@ public class Main {
      * @param x coordinate x of central point (point with index 2)
      * @param j number of points with known state
      * @param prevIndex start index of searching alive points in row
-     * @return index of last checked point +1
+     * @return if row != null index of last checked point +1 else prevIndex
      */
     public int rowMap(PointRow row, byte[] map, int i, int x, int j, int prevIndex) {
         int index;
         if (row != null) {
             index = prevIndex;
-            int r;
+            int d;
             while (index<row.size()) {
-                r = Math.abs(row.getInt(index) - x) + 2;
-                if (r >= j && r < 5)
+                d = Math.abs(row.getInt(index) - x) + 2;//deviation of x and point with current index
+
+                if (d >= j && d < 5)
                 {
-                   map[i] |= 16 >> r;
+                   map[i] |= 16 >> d;//set 1 in d bit of mask
                 }
-                if (r < 5)
+                if (d < 5)
                 {
                     index++;
                 } else
@@ -318,7 +343,7 @@ public class Main {
         int index = 2 + dx;
         int neighbors = checkNeighbors(pointMap, index);
 
-        if ((pointMap[1] & (16 >> index)) > 0) {
+        if ((pointMap[1] & (16 >> index)) > 0) { //if point is alive
             return (neighbors == 3)
                     || (neighbors == 2);
         } else {
@@ -337,7 +362,14 @@ public class Main {
         int sum = 0;
         for (int i = 0; i < 3; i++) {
             for (int j = -1; j <= 1; j++) {
-                if (((i != 1) || (j != 0)) && ((pointMap[i] & (16 >> (x + j))) > 0)) {
+
+                /*
+                 * check x + j bit of mask
+                 * 16 >> (x + j) is mask of x + j bit of map
+                 */
+
+                if (((i != 1) || (j != 0))
+                        && ((pointMap[i] & (16 >> (x + j))) > 0)) {
                     sum += 1;
                 }
             }
@@ -354,6 +386,7 @@ public class Main {
                 || (str.charAt(0) == '$'))) {
 
             for (int i = 0; i < len; i++) {
+                // if point is alive
                 if (str.charAt(i) == 'o') {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
@@ -361,13 +394,15 @@ public class Main {
                         fx++;
                     }
                     pointCount = 0;
-                } else if (str.charAt(i) == 'b') {
+                } else
+                    // if point is dead
+                    if (str.charAt(i) == 'b') {
                     if (pointCount == 0) pointCount = 1;
                     for (int j = 0; j < pointCount; j++) {
                         fx++;
                     }
                     pointCount = 0;
-                } else if (str.charAt(i) == '$') {
+                } else if (str.charAt(i) == '$') { //if end of row
                     if (pointCount == 0) pointCount = 1;
                     fx = 0;
                     for (int j = 0; j < pointCount; j++) {
